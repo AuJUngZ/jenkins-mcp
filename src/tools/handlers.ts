@@ -72,10 +72,21 @@ export class ToolHandlers {
     }
 
     try {
-      await this.jenkinsService.triggerBuild(jobPath, parameters);
-      return formatMcpResponse(
-        `Build triggered successfully for job: ${jobPath}. Check Jenkins for status.`
+      const result = await this.jenkinsService.triggerBuild(
+        jobPath,
+        parameters
       );
+
+      const responseMessage = result.buildNumber
+        ? `Build triggered successfully for job: ${jobPath}. Build number: ${result.buildNumber}. Check Jenkins for status.`
+        : `Build triggered successfully for job: ${jobPath}. Check Jenkins for status.`;
+
+      return formatMcpResponse({
+        message: responseMessage,
+        jobPath,
+        buildNumber: result.buildNumber,
+        queueItemUrl: result.queueItemUrl,
+      });
     } catch (error) {
       const errorMessage = this.jenkinsService.handleError(
         error,

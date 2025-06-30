@@ -59,7 +59,7 @@ export class JenkinsService {
   public async triggerBuild(
     jobPath: string,
     parameters?: Record<string, string>
-  ): Promise<void> {
+  ): Promise<{ queueItemUrl: string; buildNumber?: string }> {
     const formattedJobPath = this.formatJobPath(jobPath);
     const params = new URLSearchParams();
 
@@ -69,10 +69,30 @@ export class JenkinsService {
       });
     }
 
-    await this.axiosInstance.post(
+    const response = await this.axiosInstance.post(
       `/${formattedJobPath}/buildWithParameters`,
       params
     );
+
+    const queueItemUrl = response.headers.location || "";
+
+    // Try to get the next build number by checking the job info
+    try {
+      const jobInfoResponse = await this.axiosInstance.get(
+        `/${formattedJobPath}/api/json?tree=nextBuildNumber`
+      );
+      const nextBuildNumber = jobInfoResponse.data.nextBuildNumber;
+
+      return {
+        queueItemUrl,
+        buildNumber: nextBuildNumber
+          ? (nextBuildNumber).toString()
+          : undefined,
+      };
+    } catch (error) {
+      // If we can't get the build number, just return the queue item URL
+      return { queueItemUrl };
+    }
   }
 
   /**
